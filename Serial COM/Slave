@@ -1,0 +1,38 @@
+#include <SoftwareSerial.h>
+
+SoftwareSerial meuSerial(10, 11); // RX, TX
+const int ledPin = 7;
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+  meuSerial.begin(9600);
+  Serial.begin(9600);
+}
+
+void loop() {
+  while (meuSerial.available() > 0) {
+    delay(1000);
+    String mensagem = meuSerial.readStringUntil('\n');
+    Serial.println("Recebido: " + mensagem);
+
+    if (mensagem.startsWith("b")) {
+      mensagem.remove(0, 1); // Remove o caractere 'B'
+      int posVirgula = mensagem.indexOf(',');
+      int botaoEstado = mensagem.substring(0, posVirgula).toInt();
+      int pwmValor = mensagem.substring(posVirgula + 1).toInt();
+
+      if (botaoEstado == 1) {
+        Serial.println("Botão Pressionado!");
+        digitalWrite(ledPin, HIGH);
+        delay(2000);
+        digitalWrite(ledPin, LOW);
+      } else {
+        analogWrite(ledPin, pwmValor);
+
+        if (pwmValor <= 20) {
+          Serial.println("Alerta: PWM Baixo!");
+        }
+      }
+    }
+  }
+}
