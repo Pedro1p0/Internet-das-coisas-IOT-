@@ -1,0 +1,131 @@
+//Inclui as bibliotecas do SPI e do RC522
+#include <SPI.h>
+#include <MFRC522.h>
+
+int contaFalha = 0;
+int pinoDoLedVermelho = 6;
+int pinoDoLedVerde = 5;
+int pinoDoBuzzer = 4;
+//Definição dos pinos de conexão do projeto
+#define PINO_SS 10
+#define PINO_RST 9
+//Cria o item para configurar o módulo RC522
+MFRC522 mfrc522(PINO_SS, PINO_RST); 
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); // Inicializa a serial
+  SPI.begin();// Inicializa a comunicação SPI
+  mfrc522.PCD_Init(); // Inicializa o módulo MFRC522
+
+  pinMode(pinoDoLedVermelho, OUTPUT);
+  digitalWrite(pinoDoLedVermelho, HIGH);
+
+  pinMode(pinoDoLedVerde, OUTPUT);
+  pinMode(pinoDoBuzzer,OUTPUT);
+
+  Serial.println("Sistema Inicializado: Aproxime o token");
+}
+
+String lerToken(){
+    Serial.print("UID da tag:"); // Mostra UID do token na serial
+    String conteudo = ""; //Cria uma variável vazia, do tipo string byte letra;
+    for (byte i = 0; i < mfrc522.uid.size; i++) {
+      if(mfrc522.uid.uidByte[i] < 0x10){
+        Serial.print(" 0");
+      }
+      else{
+        Serial.print(" ");
+      }
+
+    Serial.print(mfrc522.uid.uidByte[i], HEX);// Printa a mensagem convertida em hexadecimal
+
+    if(mfrc522.uid.uidByte[i] < 0x10){
+      conteudo.concat(String(" 0"));
+    }
+    else{
+      conteudo.concat(String(" "));
+    }
+    
+    conteudo.concat(String(mfrc522.uid.uidByte[i], HEX));
+  }
+
+  conteudo.toUpperCase();
+  return conteudo;
+}
+
+boolean temValor(String conteudo){
+   return conteudo.length() > 0;
+}
+
+ void piscaLedVermelho(int quantidade){
+
+  digitalWrite(pinoDoLedVermelho, LOW);
+  delay(1000);
+
+  while(quantidade > 0){
+    digitalWrite(pinoDoLedVermelho, HIGH);
+    delay(1000);
+    digitalWrite(pinoDoLedVermelho, LOW);
+    delay(1000);
+    quantidade--;
+  }    
+ }
+
+void acendeLedVermelho(){
+  contaFalha++;
+
+  Serial.println((String)"\nTentativa = " + contaFalha);
+  digitalWrite(pinoDoLedVerde, LOW);
+
+  Serial.println("cartão invalido");
+ 
+  if(contaFalha == 3){
+    Serial.println("SISTEMA BLOQUEADO");
+    digitalWrite(pinoDoBuzzer,HIGH);
+    piscaLedVermelho(10);
+    digitalWrite(pinoDoBuzzer,LOW);
+    contaFalha = 0;
+  }
+  else{
+    piscaLedVermelho(3);
+  } 
+  digitalWrite(pinoDoLedVermelho, HIGH); 
+}
+
+void acendeLedVerde(){
+  contaFalha = 0;
+  digitalWrite(pinoDoLedVermelho, LOW);
+  digitalWrite(pinoDoLedVerde, HIGH);
+  Serial.println("\nAcesso liberado");
+  delay(10000);
+  digitalWrite(pinoDoLedVermelho, HIGH);
+  digitalWrite(pinoDoLedVerde, LOW);
+} 
+
+void verificaAcesso(String conteudo){
+
+  if (conteudo.substring(1) == "99 01 3D 53") {
+    acendeLedVerde();
+  }
+  else{
+      acendeLedVermelho();
+  }
+}
+
+
+void loop() {
+    // put your main code here, to run repeatedly:
+  if (!mfrc522.PICC_IsNewCardPresent()) return;// Aguarda a aproximação do token
+
+  if (!mfrc522.PICC_ReadCardSerial()) return; // Seleciona qual token vai ser utilizado
+
+  Serial.println();
+  String conteudo = lerToken();
+  
+  if(!temValor(conteudo)) return;
+  
+  verificaAcesso(conteudo);
+
+  delay(500);
+}
