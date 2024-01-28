@@ -1,0 +1,31 @@
+#include <SoftwareSerial.h>
+
+SoftwareSerial meuSerial(10, 11); // RX, TX
+const int botaoPin = 4;
+const int potPin = A0;
+char mensagem;
+void setup() {
+  pinMode(botaoPin, INPUT);
+  meuSerial.begin(9600);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int botaoEstado = digitalRead(botaoPin);
+  int potValor = analogRead(potPin);
+  int pwmValor = map(potValor, 0, 1023, 0, 255);
+ 
+  meuSerial.print("b"); // Indica que o botão está sendo enviado
+  meuSerial.print(botaoEstado);
+  meuSerial.print(",");
+  meuSerial.println(pwmValor);
+  //meuSerial.write('\n');
+
+  
+  Serial.print("Botao: ");
+  Serial.print(botaoEstado);
+  Serial.print(", PWM: ");
+  Serial.println(pwmValor);
+
+  delay(1000);
+}
